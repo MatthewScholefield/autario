@@ -27,7 +27,13 @@ proc registerAttributes*(self: var Task, attributes: Table[string, string]) =
       let ret = Parser(parse : timeparser.parseTime).parseTime(value)
       if ret.isNone:
         raise newException(AutaError, "Invalid due attribute")
-      self.data["due"] = %*{"data": ret.get, "time": ret.get.quantifyTime(now())}
+      let currentTime = now();
+      self.data["due"] = %*{
+        "string": value,
+        "data": ret.get,
+        "base": currentTime.toTime.toUnix,
+        "time": ret.get.quantifyTime(currentTime).toTime.toUnix
+      }
     elif attr == "recur":
       let ret = Parser(parse : parseRecur).parseRecur(value)
       if ret.isNone:

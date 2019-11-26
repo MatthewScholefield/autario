@@ -6,10 +6,10 @@ import timeparser
 import parserutils
 
 const recurPatterns = @[
-  ("daily", "day"),
-  ("weekly", "week"),
-  ("monthly", "month"),
-  ("yearly", "year")
+  ("daily", tuDays),
+  ("weekly", tuWeeks),
+  ("monthly", tuMonths),
+  ("yearly", tuYears)
 ]
 
 proc parseRecur*(parser: Parser, input: string): Option[seq[TimeCommand]] =

@@ -65,3 +65,13 @@ proc create*(self: var Autario, task: Task): Task {.discardable.} =
   task.registerAttributes(task.attributes)
   self.tasks.add(task)
   return task
+
+
+proc markDone*(self: var Autario, taskUuid: string) =
+  var index = -1
+  for i, task in self.tasks:
+    if task.uuid == taskUuid:
+      index = i;
+  if index == -1:
+    raise newException(AutaError, "Invalid task uuid")
+  self.tasks.delete(index)

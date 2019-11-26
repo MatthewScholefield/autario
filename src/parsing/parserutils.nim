@@ -9,6 +9,22 @@ const subexprSep* = "(?:" & [r"_", r"\-", r"\s+", r""].join("|") & ")"
 const allSep* = "(?:" & subexprSep & "|" & exprSep & ")"
 
 type
+  TimeUnit* = enum
+    tuMinute = (0, "minute")
+    tuHour = "hour"
+    tuWeekday = "weekday"
+    tuMonthday = "monthday"
+    tuMonth = "month"
+    tuYear = "year"
+
+    tuMinutes = "minutes"
+    tuHours = "hours"
+    tuDays = "days"
+    tuWeeks = "weeks"
+    tuMonths = "months"
+    tuYears = "years"
+
+
   TimeCommandType* = enum
     tctRemainderSet = (0, "setRemainder")
     tctRelativeUnitSet = "setRelativeUnit"
@@ -18,7 +34,7 @@ type
   TimeCommand* = object
     kind*: TimeCommandType
     num*: int
-    unit*: string
+    unit*: TimeUnit
 
 type
   Parser* = object

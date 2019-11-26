@@ -42,7 +42,10 @@ proc formatColumns*[T](printData: seq[array[T, string]], labels: array[T, string
     lines.add(line)
   return lines.join("\n")
 
+import json
+
 proc formatTasks*(tasks: seq[Task]): string =
+  # return $%tasks
   type TaskOrder = tuple
     dueTime: int
     taskId: int
@@ -59,7 +62,7 @@ proc formatTasks*(tasks: seq[Task]): string =
   for order in taskOrder:
     let task = tasks[order.tasksIndex]
     var dueDelta: string
-    if "due.time" in task.data:
+    if "due" in task.data:
       dueDelta = englishDuration(task.data{"due", "time"}.getInt() - getTime().toUnix(), 1, task.data{"due", "precision"}.getInt())
     formatParts.add([
       $task.id,

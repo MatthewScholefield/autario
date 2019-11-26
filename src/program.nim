@@ -49,6 +49,15 @@ proc handleModify(self: var Program) =
   if numModified == 0:
     echo "No tasks matched the search query."
 
+proc handleDone(self: var Program) =
+  var numModified = 0
+  for task in self.matchedTasks(self.before).toSeq:
+    self.auta.markDone(task.uuid)
+    echo &"Marked task '{task.label}' as complete."
+    numModified += 1
+  if numModified == 0:
+    echo "No tasks matched the search query."
+
 proc handleList(self: var Program) = 
   let tasks = toSeq(self.matchedTasks(self.combined))
   echo tasks.formatTasks()
@@ -60,7 +69,10 @@ let commandToHandler = {
   "add": handleCreate,
   "list": handleList,
   "mod": handleModify,
-  "modify": handleModify
+  "modify": handleModify,
+  "done": handleDone,
+  "del": handleDone,
+  "delete": handleDone
 }.toTable;
 
 proc parse*(self: var Program, args: seq[TaintedString]) =
