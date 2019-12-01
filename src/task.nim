@@ -54,7 +54,7 @@ proc registerAttributes*(self: var Task, attributes: Table[string, string], curr
         lastEvent = currentTime.toTime.toUnix.int
         precision = 60
     else:
-      let quant = ret.get.quantifyTime(currentTime)
+      let quant = offsetParts.quantifyTime(currentTime)
       lastEvent = quant.date.toTime.toUnix.int
       precision = quant.precision
     var reverseRecur = recur
@@ -62,6 +62,7 @@ proc registerAttributes*(self: var Task, attributes: Table[string, string], curr
     while lastEvent > currentTime.toTime.toUnix:
       lastEvent = @[reverseRecur].quantifyTime(lastEvent.fromUnix.local).date.toTime.toUnix.int
     self.data["recur"] = %*{"lastEvent": lastEvent, "freq": recur, "precision": precision}
+    self.context = "__recur__" & (if self.context == "": "" else: ":" & self.context)
   
   attributes.del("due")
   attributes.del("recur")
@@ -82,7 +83,8 @@ proc spawnTasks*(self: var Task): seq[Task] =
     task.id = -1
     task.data.fields.clear()
     task.attributes.del("recur")
-    let attributes = task.attributes
+    task.context = task.context.split("__recur__", 1)[1].strip(trailing = false, chars = {':'})
+    var attributes = task.attributes  # Needs to be `var` (possible bug in Nim)
     task.attributes.clear()
     task.registerAttributes(attributes, nextEvent.fromUnix.local)
     result.add(task)
@@ -94,3 +96,4 @@ proc getSecondsTillDue*(self: Task): int =
 
 proc getDuePrecision*(self: Task): int =
   self.data{"due", "precision"}.getInt()
+

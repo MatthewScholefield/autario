@@ -15,7 +15,8 @@ proc constructObject*(s: var YamlStream, c: ConstructionContext,
     result: var JsonNodeObj) =
   case s.peek().kind:
     of yamlScalar:
-      let content = s.next().scalarContent
+      var ev = s.next()
+      let content = ev.scalarContent
       case content:
         of "null":
           result = JsonNodeObj(kind: JNull)
@@ -24,16 +25,13 @@ proc constructObject*(s: var YamlStream, c: ConstructionContext,
         of "false":
           result = JsonNodeObj(kind: JBool, bval: false)
         else:
-          if "." in content:
-            try:
+          try:
+            if "." in content:
               result = JsonNodeObj(kind: JFloat, fnum: content.parseFloat)
-            except ValueError:
-              raise newException(YamlConstructionError, "Invalid float")
-          else:
-            try:
+            else:
               result = JsonNodeObj(kind: JInt, num: content.parseInt)
-            except ValueError:
-              raise newException(YamlConstructionError, "Invalid integer")
+          except ValueError:
+            result = JsonNodeObj(kind: JString, str: content)
     of yamlStartSeq:
       s.ensureKind(yamlStartSeq)
       result = JsonNodeObj(kind: JArray, elems: @[])
@@ -81,3 +79,15 @@ proc representObject*(node: JsonNodeObj, ts: TagStyle,
       for val in node.elems:
         representObject(val[], ts, c, tag)
       c.put(endSeqEvent())
+
+
+
+when defined unit_tests:
+  proc checkSerialization(obj: JsonNode) =
+    var obj2: JsonNode
+    load(dump(obj), obj2)
+    assert($obj == $obj2)
+
+  checkSerialization(%*{"createdAt": 12})
+  checkSerialization(%*{"createdAt": {"innerVal": 12}})
+  checkSerialization(%*{"createdAt": {"innerVal": "string"}})

@@ -1,6 +1,7 @@
 import parsing/parserutils
 import times
 import options
+import strformat
 
 import exceptions
 import parsing/parserutils
@@ -16,7 +17,7 @@ proc quantifyTime*(commands: seq[RTimeCommand], src: Datetime): QuantifiedTime =
       timeType = some(command.kind)
     else:
       if timeType.get != command.kind:
-        raise newException(AutaError, "Cannot mix ways of quantifying time")
+        raise newException(AutaError, &"Cannot mix ways of quantifying time. Conflicting types: {timeType.get} and {command.kind}")
   if timeType.isNone:
     raise newException(AutaError, "No commands provided")
   

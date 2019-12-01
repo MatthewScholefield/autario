@@ -3,6 +3,7 @@ import strutils
 import sequtils
 import strformat
 import options
+import sugar
 
 import params
 import autario
@@ -78,6 +79,12 @@ proc handleInfo(self: var Program) =
   if numMatched == 0:
     echo "No tasks matched the search query."
 
+proc handleRecur(self: var Program) =
+  let tasks = self.auta.tasks.filter(task => "recur" in task.attributes)
+  echo tasks.formatTasks()
+  echo ""
+  echo &"{tasks.len} tasks."
+
 let commandToHandler = {
   "create": handleCreate,
   "add": handleCreate,
@@ -87,7 +94,8 @@ let commandToHandler = {
   "done": handleDone,
   "del": handleDone,
   "delete": handleDone,
-  "info": handleInfo
+  "info": handleInfo,
+  "recur": handleRecur
 }.toTable;
 
 proc parse*(self: var Program, args: seq[TaintedString]) =
