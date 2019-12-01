@@ -68,71 +68,71 @@ proc joinRegex[T](patterns: seq[tuple[pattern: string, value: T]]): string =
 proc joinRegex(patterns: seq[string]): string =
   "(" & patterns.join("|") & ")"
 
-proc enumMatchToCommands[T](unit: parserutils.TimeUnit, patterns: seq[tuple[pattern: string,
-    value: T]], match: RegexMatch): seq[TimeCommand] =
+proc enumMatchToCommands[T](unit: parserutils.RTimeUnit, patterns: seq[tuple[pattern: string,
+    value: T]], match: RegexMatch): seq[RTimeCommand] =
   let value = match.match.regexMap(patterns).get.value
-  result.add(TimeCommand(
+  result.add(RTimeCommand(
     kind: tctRemainderSet,
     num: value.ord(),
     unit: unit
   ))
 
 proc makeTimeHandler(): auto =
-  (proc(match: RegexMatch): seq[TimeCommand] {.closure.} =
+  (proc(match: RegexMatch): seq[RTimeCommand] {.closure.} =
     let
       groups = match.captures.toTable
       hour = groups["hour"]
       minute = groups.getOrDefault("minute")
-    result.add(TimeCommand(
+    result.add(RTimeCommand(
       kind: tctRemainderSet,
       num: hour.parseInt,
       unit: tuHour
     ))
     if minute != "":
-      result.add(TimeCommand(
+      result.add(RTimeCommand(
         kind: tctRemainderSet,
         num: minute.parseInt,
         unit: tuMinute
       )))
 
 proc makeNextHandler(): auto =
-  (proc(match: RegexMatch): seq[TimeCommand] {.closure.} =
+  (proc(match: RegexMatch): seq[RTimeCommand] {.closure.} =
     var groups = match.captures.toTable
     let nextCount = groups["nexts"].count("next") - groups["nexts"].count("last")
     groups.del("nexts")
     assert(groups.len == 1)
     for key, value in groups.pairs:
-      result.add(TimeCommand(
+      result.add(RTimeCommand(
         kind: tctRelativeUnitSet,
         num: nextCount,
-        unit: parseEnum[parserutils.TimeUnit](key.split("_")[0])
+        unit: parseEnum[parserutils.RTimeUnit](key.split("_")[0])
       )))
 
-proc makeEnumHandler[T](unit: parserutils.TimeUnit, patterns: seq[tuple[pattern: string,
+proc makeEnumHandler[T](unit: parserutils.RTimeUnit, patterns: seq[tuple[pattern: string,
     value: T]]): auto =
-  (proc(m: RegexMatch): seq[TimeCommand] = (enumMatchToCommands(unit,
+  (proc(m: RegexMatch): seq[RTimeCommand] = (enumMatchToCommands(unit,
       patterns, m)))
 
-proc makeMatchHandler(commandType: TimeCommandType): auto =
-  (proc(match: RegexMatch): seq[TimeCommand] =
+proc makeMatchHandler(commandType: RRTimeCommandType): auto =
+  (proc(match: RegexMatch): seq[RTimeCommand] =
     for key, value in match.captures.toTable.pairs:
-      result.add(TimeCommand(
+      result.add(RTimeCommand(
         kind: commandType,
         num: value.parseInt,
-        unit: parseEnum[parserutils.TimeUnit](key.split('_')[0])
+        unit: parseEnum[parserutils.RTimeUnit](key.split('_')[0])
       )))
 
 proc makeRelativeMatchHandler(): auto =
-  (proc(match: RegexMatch): seq[TimeCommand] {.closure.} =
+  (proc(match: RegexMatch): seq[RTimeCommand] {.closure.} =
     let groups = match.captures.toTable
-    result.add(TimeCommand(
+    result.add(RTimeCommand(
       kind: tctRelativeUnitSet,
       num: groups["offsets"].count("after") - groups["offsets"].count("before") +
           (if groups["day"] == "tomorrow": 1 else: -1),
       unit: tuDays
     )))
 
-proc parseTime*(parser: Parser, input: string): Option[seq[TimeCommand]] =
+proc parseTime*(parser: Parser, input: string): Option[seq[RTimeCommand]] =
   var patterns = @[
     (timePattern, makeTimeHandler()),
     (weekdayPatterns.joinRegex(), makeEnumHandler(tuWeekday, weekdayPatterns)),

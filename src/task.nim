@@ -3,6 +3,7 @@ import json
 import options
 import times
 import sequtils
+import strutils
 import sugar
 
 import parsing/timeparser
@@ -21,28 +22,75 @@ type Task* = object
   data*: JsonNode
 
 
-proc registerAttributes*(self: var Task, attributes: Table[string, string]) =
-  for attr, value in attributes.pairs:
-    if attr == "due":
-      let ret = Parser(parse : timeparser.parseTime).parseTime(value)
-      if ret.isNone:
-        raise newException(AutaError, "Invalid due attribute")
-      let currentTime = now();
-      self.data["due"] = %*{
-        "string": value,
-        "data": ret.get,
-        "base": currentTime.toTime.toUnix,
-        "time": ret.get.quantifyTime(currentTime).toTime.toUnix
-      }
-    elif attr == "recur":
-      let ret = Parser(parse : parseRecur).parseRecur(value)
-      if ret.isNone:
-        raise newException(AutaError, "Invalid recur attribute")
-      let offset = ret.get.filter((x) => x.kind != tctRecurUnit)
-      let recur = ret.get.filter((x) => x.kind == tctRecurUnit)
-      if recur.len != 1:
-        raise newException(AutaError, "Recur unit doesn't specify frequency properly")
-      self.data["recur"] = %*{"offset": offset, "freq": recur}
+proc registerAttributes*(self: var Task, attributes: Table[string, string], currentTime: DateTime = now()) =
+  var attributes = attributes
+  if "due" in attributes:
+    let ret = Parser(parse : timeparser.parseTime).parseTime(attributes["due"])
+    if ret.isNone:
+      raise newException(AutaError, "Invalid due attribute")
+    let quant = ret.get.quantifyTime(currentTime)
+    self.data["due"] = %*{
+      "data": ret.get,
+      "base": currentTime.toTime.toUnix,
+      "time": quant.date.toTime.toUnix,
+      "precision": quant.precision
+    }
+  if "recur" in attributes:
+    let ret = Parser(parse : parseRecur).parseRecur(attributes["recur"])
+    if ret.isNone:
+      raise newException(AutaError, "Invalid recur attribute")
+    let
+      offsetParts = ret.get.filter((x) => x.kind != tctRecurUnit)
+      recurParts = ret.get.filter((x) => x.kind == tctRecurUnit)
+    if recurParts.len != 1:
+      raise newException(AutaError, "Recur unit doesn't specify frequency properly")
+    var recur = RTimeCommand(kind: tctUnitAdd, num: recurParts[0].num, unit: recurParts[0].unit)
+    var precision, lastEvent: int
+    if offsetParts.len == 0:
+      if "due" in self.data:
+        lastEvent = self.data["due"]["time"].getInt()
+        precision = self.data["due"]["precision"].getInt()
+      else:
+        lastEvent = currentTime.toTime.toUnix.int
+        precision = 60
     else:
-      raise newException(AutaError, "Unknown attribute: " & attr)
-    self.attributes[attr] = value
+      let quant = ret.get.quantifyTime(currentTime)
+      lastEvent = quant.date.toTime.toUnix.int
+      precision = quant.precision
+    var reverseRecur = recur
+    reverseRecur.num *= -1
+    while lastEvent > currentTime.toTime.toUnix:
+      lastEvent = @[reverseRecur].quantifyTime(lastEvent.fromUnix.local).date.toTime.toUnix.int
+    self.data["recur"] = %*{"lastEvent": lastEvent, "freq": recur, "precision": precision}
+  
+  attributes.del("due")
+  attributes.del("recur")
+  if attributes.len != 0:
+    raise newException(AutaError, "Unknown attribute: " & toSeq(keys(attributes)).join(", "))
+
+proc spawnTasks*(self: var Task): seq[Task] =
+  if "recur" notin self.data:
+    return
+  let recurData = self.data["recur"]
+  var lastEvent = recurData["lastEvent"].getInt()
+  let curTime = now()
+  while curTime.toTime.toUnix >= lastEvent:
+    let delta = @[recurData["freq"].to(RTimeCommand)]
+    let nextEvent = delta.quantifyTime(lastEvent.fromUnix.local).date.toTime.toUnix.int
+    var task = self
+    task.uuid = ""
+    task.id = -1
+    task.data.fields.clear()
+    task.attributes.del("recur")
+    let attributes = task.attributes
+    task.attributes.clear()
+    task.registerAttributes(attributes, nextEvent.fromUnix.local)
+    result.add(task)
+    lastEvent = nextEvent
+  self.data{"recur", "lastEvent"} = %lastEvent
+
+proc getSecondsTillDue*(self: Task): int =
+  self.data{"due", "time"}.getInt() - getTime().toUnix().int
+
+proc getDuePrecision*(self: Task): int =
+  self.data{"due", "precision"}.getInt()

@@ -13,3 +13,4 @@ bin           = @["auta"]
 
 requires "nim >= 1.0.2"
 requires "yaml >= 0.12.0"
+requires "nimcrypto"

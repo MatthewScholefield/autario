@@ -9,7 +9,7 @@ const subexprSep* = "(?:" & [r"_", r"\-", r"\s+", r""].join("|") & ")"
 const allSep* = "(?:" & subexprSep & "|" & exprSep & ")"
 
 type
-  TimeUnit* = enum
+  RTimeUnit* = enum
     tuMinute = (0, "minute")
     tuHour = "hour"
     tuWeekday = "weekday"
@@ -25,22 +25,22 @@ type
     tuYears = "years"
 
 
-  TimeCommandType* = enum
+  RRTimeCommandType* = enum
     tctRemainderSet = (0, "setRemainder")
     tctRelativeUnitSet = "setRelativeUnit"
     tctUnitAdd = "addUnit"
     tctRecurUnit = "recurUnit"
   
-  TimeCommand* = object
-    kind*: TimeCommandType
+  RTimeCommand* = object
+    kind*: RRTimeCommandType
     num*: int
-    unit*: TimeUnit
+    unit*: RTimeUnit
 
 type
   Parser* = object
-    parse*: proc(parser: Parser, input: string): Option[seq[TimeCommand]]
+    parse*: proc(parser: Parser, input: string): Option[seq[RTimeCommand]]
 
-proc parseRemaining*(parser: Parser, remaining: string, commands: seq[TimeCommand]): Option[seq[TimeCommand]] = 
+proc parseRemaining*(parser: Parser, remaining: string, commands: seq[RTimeCommand]): Option[seq[RTimeCommand]] = 
   if remaining == "":
     return some(commands)
   let otherCommands = parser.parse(parser, remaining)

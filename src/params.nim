@@ -45,6 +45,6 @@ proc matches*(self: Filter, task: Task, withContext = true): bool =
   return (
     (self.ids.len == 0 or task.id in self.ids) and
     (self.tokens.len == 0 or self.tokens.join(" ") in task.label) and
-    (not withContext or (if self.context.isNone: "" else: self.context.get) == task.context) and
+    (if self.context.isNone: not withContext or task.context == "" else: self.context.get == task.context) and
     (self.attributes.len == 0 or self.attributes == task.attributes)
   )

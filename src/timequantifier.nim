@@ -5,8 +5,10 @@ import options
 import exceptions
 import parsing/parserutils
 
-proc quantifyTime*(commands: seq[TimeCommand], src: Datetime): DateTime =
-  var timeType: Option[TimeCommandType]
+type QuantifiedTime = tuple[date: DateTime, precision: int]
+
+proc quantifyTime*(commands: seq[RTimeCommand], src: Datetime): QuantifiedTime =
+  var timeType: Option[RRTimeCommandType]
   var date = src
   var delta: TimeInterval
   for command in commands:
@@ -18,9 +20,9 @@ proc quantifyTime*(commands: seq[TimeCommand], src: Datetime): DateTime =
   if timeType.isNone:
     raise newException(AutaError, "No commands provided")
   
-  var precision = Inf
+  var precision = high(int)
 
-  proc mark(prec: var float, size: float) =
+  proc mark(prec: var int, size: int) =
     prec = min(prec, size)
 
   case timeType.get:
@@ -112,4 +114,4 @@ proc quantifyTime*(commands: seq[TimeCommand], src: Datetime): DateTime =
     raise newException(AutaError, "Time command type cannot be quantified: " & $timeType.get)
   
   let base = initDateTime(date.monthday, date.month, date.year, date.hour, date.minute, 0, date.timezone)
-  return base + delta
+  return (base + delta, precision)

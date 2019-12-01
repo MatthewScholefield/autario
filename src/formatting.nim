@@ -7,22 +7,70 @@ import times
 import terminal
 import colors
 import json
+import math
+
+const units = [
+  ("year", 365 * 24 * 60 * 60),
+  ("month", 30 * 24 * 60 * 60),
+  ("week", 7 * 24 * 60 * 60),
+  ("day", 24 * 60 * 60),
+  ("hour", 60 * 60),
+  ("minute", 60),
+  ("second", 1)
+]
+
+const unitValues = (var values: seq[int]; for unit, seconds in units.items: values.add(seconds); values)
 
 
-proc englishDuration*(delta: int64, numItems: int, preciion: int): string =
-  $(delta.toBiggestFloat / 60.0 / 60.0) & " hours"
+proc formatPlural(amount: int, unit: string): string =
+  var s = $amount & " " & unit
+  if amount != 1:
+    s.add("s")
+  return s
 
 
-proc formatColumns*[T](printData: seq[array[T, string]], labels: array[T, string]): string =
+proc formatAnd(items: seq[string]): string =
+  if items.len < 3:
+    return items.join(" and ")
+  return items[0] & ", and " & items[1 .. ^ items.len].toSeq.join(", ")
+
+
+proc matchPrecision(precision: int, unitValues: seq[int], middle = 0.5): int =
+  var lastAmount = -Inf
+  for i, amount in unitValues:
+    let ratio = (precision - amount).float / (lastAmount - amount.float)
+    if ratio >= middle:
+      return i - 1
+    lastAmount = amount.float
+  return -1
+
+
+proc formatDuration*(delta: int64, numItems: int, precision: int): string =
+  var delta = delta
+  let cutoff = matchPrecision(precision, unitValues)
+  var parts: seq[string]
+  for i, (unit, unitSeconds) in units:
+    let amount = delta.float / unitSeconds.float
+    var amountRounded = if i == cutoff: ceil(amount).int else: amount.int
+    if amountRounded != 0:
+      delta -= unitSeconds * amountRounded
+      parts.add(formatPlural(amountRounded, unit))
+    if i == cutoff:
+      break
+  return formatAnd(parts[0 .. min(parts.len - 1, numItems - 1)])
+
+
+proc formatColumns*[T](printData: seq[array[T, string]], labels: array[T,
+    string]): string =
   var maxLens: array[T, int]
   for row in printData:
     for i, data in row:
       maxLens[i] = max(maxLens[i], data.len)
-  
+
   for i, label in labels:
     if maxLens[i] != 0:
       maxLens[i] = max(maxLens[i], label.len)
-  
+
   var
     lines: seq[string]
   for rowNum, row in labels & printData:
@@ -42,10 +90,7 @@ proc formatColumns*[T](printData: seq[array[T, string]], labels: array[T, string
     lines.add(line)
   return lines.join("\n")
 
-import json
-
 proc formatTasks*(tasks: seq[Task]): string =
-  # return $%tasks
   type TaskOrder = tuple
     dueTime: int
     taskId: int
@@ -53,9 +98,9 @@ proc formatTasks*(tasks: seq[Task]): string =
   var taskOrder: seq[TaskOrder]
   for i, task in tasks:
     taskOrder.add((
-      dueTime : task.data{"due", "time"}.getInt(high(int)),
-      taskId : task.id,
-      tasksIndex : i
+      dueTime: task.data{"due", "time"}.getInt(high(int)),
+      taskId: task.id,
+      tasksIndex: i
     ))
   taskOrder.sort()
   var formatParts: seq[array[5, string]]
@@ -63,7 +108,7 @@ proc formatTasks*(tasks: seq[Task]): string =
     let task = tasks[order.tasksIndex]
     var dueDelta: string
     if "due" in task.data:
-      dueDelta = englishDuration(task.data{"due", "time"}.getInt() - getTime().toUnix(), 1, task.data{"due", "precision"}.getInt())
+      dueDelta = formatDuration(task.getSecondsTillDue, 1, task.getDuePrecision)
     formatParts.add([
       $task.id,
       $task.label,
@@ -72,3 +117,17 @@ proc formatTasks*(tasks: seq[Task]): string =
       task.data{"recur", "frequency"}.getStr()
     ])
   return formatParts.formatColumns(["Id", "Label", "Tags", "Due", "Recur"])
+
+proc formatTaskInfo*(task: Task): string =
+  var formatParts: seq[array[2, string]] = @[
+    ["Description", task.label]
+  ]
+  if "due" in task.data:
+    formatParts.add(["Due", formatDuration(task.getSecondsTillDue, high(int), task.getDuePrecision)])
+  if "recur" in task.data:
+    formatParts.add(["Recur", task.attributes["recur"]])
+  if task.tags.len != 0:
+    formatParts.add(["Tags", task.tags.join(", ")])
+  if task.context != "":
+    formatParts.add(["Context", task.context])
+  return formatParts.formatColumns(["", "Task " & $task.id])

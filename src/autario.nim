@@ -1,12 +1,14 @@
 import os
 import json
-import collections/tables, collections/sets
+import collections/tables
 import yaml/serialization, yaml/presenter, streams
 import oids
 import sets
 import options
 import strutils
 import times
+import sugar
+import system
 
 import exceptions
 import params
@@ -42,6 +44,15 @@ proc findTaskIndex(self: Autario, taskUuid: string): Option[int] =
     if task.uuid == taskUuid:
       return some(i)
 
+iterator matchedTasks*(self: Autario, params: Params,
+    withContext = false): Task =
+  for i in self.tasks:
+    if params.toFilter.matches(i, withContext):
+      yield i
+
+proc getTask*(self: Autario, taskUuid: string): Option[Task] =
+  self.findTaskIndex(taskUuid).map(i => self.tasks[i])
+
 proc modify*(self: var Autario, taskUuid: string, changes: Params) =
   var index = self.findTaskIndex(taskUuid)
   if index.isNone:
@@ -71,7 +82,17 @@ proc markDone*(self: var Autario, taskUuid: string) =
   var index = -1
   for i, task in self.tasks:
     if task.uuid == taskUuid:
-      index = i;
+      index = i
   if index == -1:
     raise newException(AutaError, "Invalid task uuid")
   self.tasks.delete(index)
+
+proc spawnRecurring*(self: var Autario): seq[tuple[newTask: Task,
+    baseID: int]] =
+  for i in 0 ..< self.tasks.len:
+    var newTasks = self.tasks[i].spawnTasks()
+    for j in 0 ..< newTasks.len:
+      newTasks[j].uuid = $genOid()
+      newTasks[j].id = self.findFreeId()
+      self.tasks.add(newTasks[j])
+      result.add((newTasks[j], self.tasks[i].id))
