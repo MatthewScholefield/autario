@@ -8,8 +8,6 @@ import os
 import json
 import marshal
 
-import appdirs
-
 import params
 import autario
 import task
@@ -126,6 +124,8 @@ let commandDescriptions = {
   "del": "Delete a task",
   "info": "View details about a task",
   "recur": "Show recurring tasks",
+  "link": "Link this device with other devices",
+  "sync": "Force synchronization between devices",
   "help": "Show this information"
 }
 
@@ -135,6 +135,11 @@ proc handleHelp(self: var Program) =
     formatParts.add([key, value])
   echo formatColumns(formatParts, ["Command", "Description"])
 
+proc handleSync(self: var Program) =
+  if self.auta.auth.isNone:
+    raise newException(AutaError, "You must link your device before syncing. Run 'auta link'.")
+  self.auta.syncRead(force=true)
+  self.auta.dirty = true
 
 proc handleLink(self: var Program) =
   let args = self.after.tokens
@@ -196,6 +201,7 @@ let commandToHandler = {
   "info": handleInfo,
   "recur": handleRecur,
   "link": handleLink,
+  "sync": handleSync,
   "help": handleHelp,
   "-h": handleHelp,
   "--help": handleHelp
@@ -217,7 +223,6 @@ proc parse*(self: var Program, args: seq[string]) =
     self.before = Params()
 
 proc run*(self: var Program) =
-  self.auta.configFile = joinPath(user_config("autario"), "data.json")
   self.auta.load()
   self.auta.syncRead()
   self.checkRecurring()

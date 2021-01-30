@@ -18,12 +18,15 @@ import params
 import task
 import encryption
 
+import appdirs
+
 type Autario* = object
-  configFile*: string
   tasks*: seq[Task]
   auth*: Option[AutaAuth]
-  lastSync: int
-  dirty: bool
+  lastSync*: int
+  dirty*: bool
+
+let configFile = joinPath(user_config("autario"), "data.json")
 
 proc findFreeId(self: var Autario): int =
   var usedIds = initHashSet[int]()
@@ -37,7 +40,6 @@ proc findFreeId(self: var Autario): int =
 
 proc deserializeAutario*(node: JsonNode): Autario =
     Autario(
-        configFile : node["configFile"].str,
         tasks : (
             var v: seq[Task] = @[]
             for elem in node["tasks"].elems:
@@ -56,7 +58,6 @@ proc deserializeAutario*(node: JsonNode): Autario =
   
 proc serialize*(self: Autario): JsonNode =
     %* {
-      "configFile": self.configFile,
       "tasks": %(
           var v: seq[JsonNode] = @[]
           for task in self.tasks:
@@ -74,13 +75,13 @@ proc serialize*(self: Autario): JsonNode =
     }
 
 proc load*(self: var Autario) =
-  if fileExists(self.configFile):
-    var node = parseFile(self.configFile)
+  if fileExists(configFile):
+    var node = parseFile(configFile)
     self = deserializeAutario(node)
 
-proc syncRead*(self: var Autario) =
+proc syncRead*(self: var Autario, force: bool = false) =
   if self.auth.isSome:
-    if not self.auth.get.checkIfUpToDate():
+    if not self.auth.get.checkIfUpToDate() or force:
       echo "Pulling changes..."
       let updatedData = self.auth.get.readData()
       if updatedData.isNone:
@@ -97,15 +98,15 @@ proc ensureParent(path: string) =
     createDir(parent)
 
 proc syncWrite*(self: var Autario) =
-  ensureParent(self.configFile)
-  writeFile(self.configFile, $self.serialize())
+  ensureParent(configFile)
+  writeFile(configFile, $self.serialize())
   if self.dirty:
     self.dirty = false
     if self.auth.isSome:
       echo "Uploading changes..."
       self.auth.get.updateSyncTime()
       self.auth.get.uploadData($self.serialize())
-    writeFile(self.configFile, $self.serialize())
+    writeFile(configFile, $self.serialize())
 
 proc createBlobUrl(): string =
   var client = newHttpClient()
@@ -115,7 +116,7 @@ proc createBlobUrl(): string =
 
 proc enableSync*(self: var Autario) =
   self.auth = some(AutaAuth(
-    key : base64.encode(getRandomBytes(32).toString),
+    key : base64.encode(getRandomBytes(keySize).toString),
     changeId : "",
     changeIdUrl : createBlobUrl(),
     dataUrl : createBlobUrl(),
