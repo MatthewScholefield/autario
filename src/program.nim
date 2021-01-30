@@ -149,7 +149,7 @@ proc handleLink(self: var Program) =
       args.len == 0 or (
         args.len == 2 and (
           args[0] == "export" or (
-            args[1] == "import" and fileExists(args[1])
+            args[0] == "import" and fileExists(args[1])
           )
         )
       )
