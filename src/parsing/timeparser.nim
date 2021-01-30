@@ -154,3 +154,12 @@ proc parseTime*(parser: Parser, input: string): Option[seq[RTimeCommand]] =
   if mapResult.isSome:
     let commands = mapResult.get.value(mapResult.get.match)
     return parser.parseRemaining(mapResult.get.remaining, commands)
+
+when isMainModule:
+    import strformat
+    import os
+    let inp = paramStr(1)
+    let res = Parser(parse : parseTime).parseTime(inp)
+    let output = if res.isNone: "error" else: $res.get
+    echo &"Input: \"{inp}\""
+    echo &"Output: {output}"
