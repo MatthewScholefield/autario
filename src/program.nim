@@ -184,6 +184,7 @@ proc handleLink(self: var Program) =
         echo "Failed to read data from server. Please check if this is the correct file."
         return
       self.auta.auth = some(auth)
+      self.auta.syncRead(true)
       echo "Linking successful."
     else:
       raise newException(ValueError, &"Invalid command: {command}")
