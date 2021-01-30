@@ -1,11 +1,17 @@
 import os
 
 import program
-import system
+import std/exitprocs
 import terminal
+import strformat
+
+import exceptions
 
 when isMainModule:
-  system.addQuitProc(resetAttributes)
+  addExitProc(resetAttributes)
   var prog = Program()
   prog.parse(commandLineParams())
-  prog.run()
+  try:
+    prog.run()
+  except AutaError:
+    echo fmt"Error: {getCurrentExceptionMsg()}"

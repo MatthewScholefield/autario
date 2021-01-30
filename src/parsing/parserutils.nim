@@ -35,6 +35,7 @@ type
     kind*: RRTimeCommandType
     num*: int
     unit*: RTimeUnit
+    exact*: bool
 
 type
   Parser* = object
@@ -67,3 +68,8 @@ proc regexMap*[T](s: string, mapping: seq[tuple[pattern: string, value: T]]): Op
       value : value
     ))
 
+proc calcAccurateDigits*(s: string): int =
+  let pos = s.rfind('.')
+  if pos == -1:
+    return 0
+  return s.len - pos - 1

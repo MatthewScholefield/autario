@@ -3,6 +3,7 @@ import strutils
 import task
 import collections/tables
 import algorithm
+import strformat
 import times
 import terminal
 import colors
@@ -44,17 +45,29 @@ proc matchPrecision(precision: int, unitValues: seq[int], middle = 0.5): int =
     lastAmount = amount.float
   return -1
 
-
 proc formatDuration*(delta: int64, numItems: int, precision: int): string =
   var delta = delta
+  let isNegative = delta < 0
+  if isNegative:
+      delta *= -1
   let cutoff = matchPrecision(precision, unitValues)
   var parts: seq[string]
   for i, (unit, unitSeconds) in units:
     let amount = delta.float / unitSeconds.float
-    var amountRounded = if i == cutoff: ceil(amount).int else: amount.int
-    if amountRounded != 0:
+    var amountRounded = (
+      if i == cutoff:
+        if isNegative:
+          ceil(amount).int
+        else:
+          floor(amount).int
+      else:
+        amount.int
+    )
+    echo &"amount: {amountRounded}"
+    if amountRounded != 0 or i == cutoff:
       delta -= unitSeconds * amountRounded
-      parts.add(formatPlural(amountRounded, unit))
+      let sign = if isNegative and amountRounded != 0: "-" else: ""
+      parts.add(sign & formatPlural(amountRounded, unit))
     if i == cutoff:
       break
   return formatAnd(parts[0 .. min(parts.len - 1, numItems - 1)])
@@ -75,10 +88,7 @@ proc formatColumns*[T](printData: seq[array[T, string]], labels: array[T,
     lines: seq[string]
   for rowNum, row in labels & printData:
     var parts: seq[string]
-    for i in zip(row, maxLens):
-      let
-        word = i.a
-        maxLen = i.b
+    for (word, maxLen) in zip(row, maxLens):
       if maxLen != 0:
         var padded = word.alignLeft(maxLen)
         if rowNum == 0:

@@ -1,2 +1,2 @@
 type
-  AutaError* = object of Exception
+  AutaError* = object of ValueError

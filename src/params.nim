@@ -14,8 +14,8 @@ type Params* = object of RootObj
 type Filter* = object of Params
   ids*: seq[int]
 
-proc ingest*(self: var Params, token: TaintedString) =
-  let token = token.string
+proc ingest*(self: var Params, token: string) =
+  let token = token
   if token.startsWith('+'):
     self.tags.add(token[1 .. ^1])
   elif token.startsWith('@'):

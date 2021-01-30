@@ -4,12 +4,18 @@ import sequtils
 import strformat
 import options
 import sugar
+import os
+import json
+import marshal
+
+import appdirs
 
 import params
 import autario
 import task
 import formatting
-
+import exceptions
+import autaauth
 
 type Program* = object
   before*: Params
@@ -56,18 +62,45 @@ proc handleModify(self: var Program) =
     echo "No tasks matched the search query."
 
 proc handleDone(self: var Program) =
-  var numMatched = 0
-  for task in self.auta.matchedTasks(self.before).toSeq:
+  var tasks: seq[Task]
+  for i in self.auta.matchedTasks(self.before).toSeq:
+    tasks.add(i)
+  if tasks.len > 1:
+    stdout.write &"Are you sure you want to mark {tasks.len} tasks as done? (Y/n) "
+    stdout.flushFile
+    let c = stdin.readChar
+    if c != '\n' and c != 'y' and c != 'Y':
+      echo "\nCancelling..."
+      return
+
+  for task in tasks:
     self.auta.markDone(task.uuid)
     echo &"Marked task '{task.label}' as complete."
-    numMatched += 1
-  if numMatched == 0:
+  if tasks.len == 0:
+    echo "No tasks matched the search query."
+
+proc handleDelete(self: var Program) =
+  var tasks: seq[Task]
+  for i in self.auta.matchedTasks(self.before).toSeq:
+    tasks.add(i)
+  if tasks.len > 1:
+    stdout.write &"Are you sure you want to delete {tasks.len} tasks? (Y/n) "
+    stdout.flushFile
+    let c = stdin.readChar
+    if c != '\n' and c != 'y' and c != 'Y':
+      echo "Cancelling..."
+      return
+  for task in self.auta.matchedTasks(self.before).toSeq:
+    self.auta.markDone(task.uuid)
+    echo &"Deleted task '{task.label}'."
+  if tasks.len == 0:
     echo "No tasks matched the search query."
 
 proc handleList(self: var Program) = 
   let tasks = toSeq(self.auta.matchedTasks(self.combined, true))
-  echo tasks.formatTasks()
-  echo ""
+  if tasks.len > 0:
+    echo tasks.formatTasks()
+    echo ""
   echo &"{tasks.len} tasks."
 
 
@@ -85,6 +118,72 @@ proc handleRecur(self: var Program) =
   echo ""
   echo &"{tasks.len} tasks."
 
+let commandDescriptions = {
+  "add": "Create a new task",
+  "list": "List tasks (default command)",
+  "mod": "Modify a task",
+  "done": "Mark a task as done",
+  "del": "Delete a task",
+  "info": "View details about a task",
+  "recur": "Show recurring tasks",
+  "help": "Show this information"
+}
+
+proc handleHelp(self: var Program) =
+  var formatParts: seq[array[2, string]]
+  for key, value in commandDescriptions.items:
+    formatParts.add([key, value])
+  echo formatColumns(formatParts, ["Command", "Description"])
+
+
+proc handleLink(self: var Program) =
+  let args = self.after.tokens
+  if (
+    self.before.context.isSome or
+    self.after.context.isSome or
+    self.before.attributes.len != 0 or
+    self.after.attributes.len != 0 or
+    self.before.tags.len != 0 or
+    self.after.tags.len != 0 or
+    not (
+      args.len == 0 or (
+        args.len == 2 and (
+          args[0] == "export" or (
+            args[1] == "import" and fileExists(args[1])
+          )
+        )
+      )
+    )
+  ):
+    raise newException(AutaError, &"Usage: {lastPathPart(getAppFilename())} link [export|import] [FILE]")
+  if args.len == 0:
+    if self.auta.auth.isSome:
+      echo "Synchronization already set up!"
+    else:
+      self.auta.enableSync()
+      echo "Synchronization set up!"
+  else:
+    let command = args[0]
+    let filename = args[1]
+    if command == "export":
+      if self.auta.auth.isNone:
+        raise newException(AutaError, "Local system is not linked yet. Please run 'auta link'.")
+      echo &"Exporting to {filename}..."
+      writeFile(filename, $$self.auta.auth.get)
+      echo &"Export complete! Import with 'auta link import \"{filename}\"'."
+    elif command == "import":
+      echo &"Loading from {filename}..."
+      let auth: AutaAuth = to(parseFile(filename), AutaAuth)
+      let data = auth.readData()
+      if data.isNone:
+        echo "Failed to read data from server. Please check if this is the correct file."
+        return
+      self.auta.auth = some(auth)
+      echo "Linking successful."
+    else:
+      raise newException(ValueError, &"Invalid command: {command}")
+
+
 let commandToHandler = {
   "create": handleCreate,
   "add": handleCreate,
@@ -92,19 +191,23 @@ let commandToHandler = {
   "mod": handleModify,
   "modify": handleModify,
   "done": handleDone,
-  "del": handleDone,
-  "delete": handleDone,
+  "del": handleDelete,
+  "delete": handleDelete,
   "info": handleInfo,
-  "recur": handleRecur
+  "recur": handleRecur,
+  "link": handleLink,
+  "help": handleHelp,
+  "-h": handleHelp,
+  "--help": handleHelp
 }.toTable;
 
-proc parse*(self: var Program, args: seq[TaintedString]) =
+proc parse*(self: var Program, args: seq[string]) =
   for arg in args:
     if self.seenCommand:
       self.after.ingest(arg)
     else:
-      if arg.string in commandToHandler:
-        self.command = arg.string
+      if arg in commandToHandler:
+        self.command = arg
         self.seenCommand = true
       else:
         self.before.ingest(arg)
@@ -114,8 +217,9 @@ proc parse*(self: var Program, args: seq[TaintedString]) =
     self.before = Params()
 
 proc run*(self: var Program) =
-  self.auta.configFile = "tasks.json"
+  self.auta.configFile = joinPath(user_config("autario"), "data.json")
   self.auta.load()
+  self.auta.syncRead()
   self.checkRecurring()
   commandToHandler[self.command](self)
-  self.auta.save()
+  self.auta.syncWrite() 

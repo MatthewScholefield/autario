@@ -22,6 +22,28 @@ type Task* = object
   data*: JsonNode
 
 
+proc deserializeTask*(node: JsonNode): Task =
+    Task(
+        uuid : to(node["uuid"], string),
+        id: to(node["id"], int),
+        label: to(node["label"], string),
+        tags : to(node["tags"], seq[string]),
+        context : to(node["context"], string),
+        attributes : to(node["attributes"], Table[string, string]),
+        data : node["data"]
+    )
+
+proc serialize*(self: Task): JsonNode =
+  %* {
+    "uuid": self.uuid,
+    "id": self.id,
+    "label": self.label,
+    "tags": self.tags,
+    "context": %self.context,
+    "attributes": %self.attributes,
+    "data": self.data
+  }
+
 proc registerAttributes*(self: var Task, attributes: Table[string, string], currentTime: DateTime = now()) =
   var attributes = attributes
   if "due" in attributes:
@@ -67,6 +89,9 @@ proc registerAttributes*(self: var Task, attributes: Table[string, string], curr
   attributes.del("due")
   attributes.del("recur")
   if attributes.len != 0:
+    for key in attributes.keys:
+      if key.startsWith("-"):
+        raise newException(AutaError, "Attributes don't start with a dash (ie. use due:tomorrow instead of -due:tomorrow)")
     raise newException(AutaError, "Unknown attribute: " & toSeq(keys(attributes)).join(", "))
 
 proc spawnTasks*(self: var Task): seq[Task] =
