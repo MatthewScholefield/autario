@@ -26,9 +26,10 @@ proc uploadData*(self: var AutaAuth, data: string) =
   let paddedData = correctPrefix & data
   let iv = getRandomBytes(ivSize).toString
   let encData = iv & encryptData(decode(self.key), paddedData, iv)
-  var client = newHttpClient()
-  discard client.putContent(self.dataUrl, encData)
-  discard client.putContent(self.changeIdUrl, self.changeId)
+  var client = newHttpClient(timeout=10000)
+  discard client.request(self.dataUrl, httpMethod = HttpPut, body = encData)
+  client = newHttpClient(timeout=10000)
+  discard client.request(self.changeIdUrl, httpMethod = HttpPut, body = self.changeId)
 
 proc readData*(self: AutaAuth): Option[string] =
   let data = newHttpClient().getContent(self.dataUrl)
