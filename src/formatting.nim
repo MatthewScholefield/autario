@@ -63,7 +63,6 @@ proc formatDuration*(delta: int64, numItems: int, precision: int): string =
       else:
         amount.int
     )
-    echo &"amount: {amountRounded}"
     if amountRounded != 0 or i == cutoff:
       delta -= unitSeconds * amountRounded
       let sign = if isNegative and amountRounded != 0: "-" else: ""
