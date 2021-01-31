@@ -19,11 +19,3 @@ proc decryptData*(key: string, data: string, iv: string): string =
 proc toString*(bytes: openarray[byte]): string =
   result = newString(bytes.len)
   copyMem(result[0].addr, bytes[0].unsafeAddr, bytes.len)
-
-when isMainModule:
-  import sysrandom
-  let iv = getRandomBytes(ivSize).toString
-  let data = "this is the data"
-  let enc = encryptData("secretkey", data, iv)
-  let dec = decryptData("secretkey", enc, iv)
-  doAssert dec == data
