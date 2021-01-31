@@ -138,10 +138,24 @@ proc handleHelp(self: var Program) =
   echo formatColumns(formatParts, ["Command", "Description"])
 
 proc handleSync(self: var Program) =
+  let usage = &"Usage: {lastPathPart(getAppFilename())} sync [up|down]"
   if self.auta.auth.isNone:
     raise newException(AutaError, "You must link your device before syncing. Run 'auta link'.")
-  self.auta.syncRead(force=true)
-  self.auta.syncWrite(force=true)
+  let args = self.after.tokens
+  if args.len > 1:
+    raise newException(AutaError, usage)
+
+  if args.len == 0:
+    self.auta.syncRead(force=true)
+    self.auta.syncWrite(force=true)
+  else:
+    case args[0]
+    of "up":
+      self.auta.syncRead(force=true)
+    of "down":
+      self.auta.syncWrite(force=true)
+    else:
+      raise newException(AutaError, usage)
 
 proc handleLink(self: var Program) =
   let args = self.after.tokens
