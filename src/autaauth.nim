@@ -57,12 +57,11 @@ proc readData*(self: AutaAuth): Option[string] =
   return simpleDecrypt(base64.decode(self.key), data)
 
 
-proc checkIfUpToDate*(self: var AutaAuth, forceCheck: bool = false): bool =
+proc checkIfUpToDate*(self: AutaAuth, forceCheck: bool = false): bool =
   let sinceSync = getTime().toUnix().int - self.lastSync
   if sinceSync < syncInterval and not forceCheck:
     return true
-  if newHttpClient().getContent(self.changeIdUrl) == self.changeId:
-    self.updateSyncTime()
+  return newHttpClient().getContent(self.changeIdUrl) == self.changeId
 
 
 when isMainModule:
