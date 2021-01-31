@@ -1,5 +1,6 @@
 import macros
 import os
+import strutils
 
 macro debug*(n: varargs[typed]): untyped =
   result = newNimNode(nnkStmtList, n)
@@ -24,3 +25,9 @@ proc ensureParent*(path: string) =
   if not dirExists(parent):
     ensureParent(parent)
     createDir(parent)
+
+proc getExceptionDetail*(): string =
+  result = getCurrentExceptionMsg()
+  if result.contains("Additional info: "):
+    result = result.split("Additional info: ")[1]
+  result = result.replace('\n', ' ').strip(chars={' ', '"'})

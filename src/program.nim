@@ -146,13 +146,15 @@ proc handleSync(self: var Program) =
     raise newException(AutaError, usage)
 
   if args.len == 0:
+    if self.auta.checkForConflict():
+      raise conflictException
     self.auta.syncRead(force=true)
     self.auta.syncWrite(force=true)
   else:
     case args[0]
-    of "up":
+    of "pull":
       self.auta.syncRead(force=true)
-    of "down":
+    of "push":
       self.auta.syncWrite(force=true)
     else:
       raise newException(AutaError, usage)

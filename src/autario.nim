@@ -4,6 +4,7 @@ import oids
 import sets
 import options
 import strutils
+import strformat
 import times
 import sugar
 import system
@@ -28,6 +29,10 @@ type Autario* = object
   dirty*: bool
 
 let configFile = joinPath(user_config("autario"), "data.json")
+let conflictException* = newException(
+  AutaError,
+  "Error: Conflict detected. Automerge is not yet supported. Run 'auta sync pull' or 'auta sync push' to resolve."
+)
 
 proc findFreeId(self: var Autario): int =
   var usedIds = initHashSet[int]()
@@ -84,17 +89,28 @@ proc save*(self: Autario) =
   ensureParent(configFile)
   writeFile(configFile, $self.serialize())
 
+proc checkForConflict*(self: Autario): bool =
+  self.dirty and not self.auth.get.checkIfChangeIdMatches()
+
 proc syncRead*(self: var Autario, force: bool = false) =
   if self.auth.isSome:
-    if not self.auth.get.checkIfUpToDate() or force:
+    if not force and self.checkForConflict():
+      raise conflictException
+
+    if force or not self.auth.get.checkIfUpToDate():
       echo "Pulling changes..."
-      let updatedData = self.auth.get.readData()
-      if updatedData.isNone:
-        echo "Error: Failed to read changes. If this persists, unlink with 'auta unlink'."
-        return
-      let node = parseJson(updatedData.get)
-      self = deserializeAutario(node)
-      self.auth.get.updateSyncTime()
+      try:
+        let updatedData = self.auth.get.readData()
+        if updatedData.isNone:
+          echo "Error: Failed to read changes. If this persists, unlink with 'auta unlink'."
+          return
+        let node = parseJson(updatedData.get)
+        self = deserializeAutario(node)
+        self.auth.get.updateSyncTime()
+      except OSError:
+        if force:
+          raise newException(AutaError, &"Error, failed to pull changes: {getExceptionDetail()}")
+        echo &"Warning: Failed to pull changes. ({getExceptionDetail()})"
 
 
 proc syncWrite*(self: var Autario, force: bool = false) =
@@ -102,8 +118,13 @@ proc syncWrite*(self: var Autario, force: bool = false) =
     self.dirty = false
     if self.auth.isSome:
       echo "Uploading changes..."
-      self.auth.get.updateSyncTime()
-      self.auth.get.uploadData($self.serialize())
+      try:
+        self.auth.get.updateSyncTime()
+        self.auth.get.uploadData($self.serialize())
+      except OSError:
+        if force:
+          raise newException(AutaError, &"Error, failed to push changes: {getExceptionDetail()}")
+        echo &"Warning: Failed to push changes. ({getExceptionDetail()})"
 
 proc createBlobUrl(): string =
   var client = newHttpClient()
