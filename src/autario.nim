@@ -12,6 +12,7 @@ import marshal
 import sysrandom
 import httpclient
 import base64
+import oids
 
 import autils
 import autaauth
@@ -109,21 +110,24 @@ proc syncRead*(self: var Autario, force: bool = false) =
         self.auth.get.updateSyncTime()
       except OSError:
         if force:
-          raise newException(AutaError, &"Error, failed to pull changes: {getExceptionDetail()}")
+          raise newException(AutaError, &"Failed to pull changes: {getExceptionDetail()}")
         echo &"Warning: Failed to pull changes. ({getExceptionDetail()})"
 
 
 proc syncWrite*(self: var Autario, force: bool = false) =
   if self.dirty or force:
-    self.dirty = false
     if self.auth.isSome:
       echo "Uploading changes..."
       try:
+        self.dirty = false
+        self.auth.get.changeId = $genOid()
         self.auth.get.updateSyncTime()
         self.auth.get.uploadData($self.serialize())
       except OSError:
+        self.dirty = true
         if force:
-          raise newException(AutaError, &"Error, failed to push changes: {getExceptionDetail()}")
+          self.save()
+          raise newException(AutaError, &"Failed to push changes: {getExceptionDetail()}")
         echo &"Warning: Failed to push changes. ({getExceptionDetail()})"
 
 proc createBlobUrl(): string =

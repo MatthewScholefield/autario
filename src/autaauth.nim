@@ -1,4 +1,3 @@
-import oids
 import times
 import httpclient
 import options
@@ -44,7 +43,6 @@ proc simpleDecrypt(key: string, data: string): Option[string] =
 
 
 proc uploadData*(self: var AutaAuth, data: string) =
-  self.changeId = $genOid()
   let encData = simpleEncrypt(base64.decode(self.key), data)
   var client = newHttpClient(timeout=10000)
   discard client.request(self.dataUrl, httpMethod = HttpPut, body = encData)

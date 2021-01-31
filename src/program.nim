@@ -138,7 +138,7 @@ proc handleHelp(self: var Program) =
   echo formatColumns(formatParts, ["Command", "Description"])
 
 proc handleSync(self: var Program) =
-  let usage = &"Usage: {lastPathPart(getAppFilename())} sync [up|down]"
+  let usage = &"Usage: {lastPathPart(getAppFilename())} sync [pull|push]"
   if self.auta.auth.isNone:
     raise newException(AutaError, "You must link your device before syncing. Run 'auta link'.")
   let args = self.after.tokens
