@@ -1,6 +1,14 @@
+# Hide extension-less files
+*
+!**/
+!*.*
+
 auta
 timeparser
 src/tests
 tasks.json
 *~
-
+/testresults
+/nimcache
+/outputGotten.txt
+/.vscode
