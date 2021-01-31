@@ -93,7 +93,7 @@ proc registerAttributes*(self: var Task, attributes: Table[string, string], curr
       if key.startsWith("-"):
         raise newException(AutaError, "Attributes don't start with a dash (ie. use due:tomorrow instead of -due:tomorrow)")
     raise newException(AutaError, "Unknown attribute: " & toSeq(keys(attributes)).join(", "))
-import strformat
+
 proc spawnTasks*(self: var Task): seq[Task] =
   if "recur" notin self.data:
     return

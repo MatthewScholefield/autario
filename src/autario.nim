@@ -12,6 +12,7 @@ import sysrandom
 import httpclient
 import base64
 
+import autils
 import autaauth
 import exceptions
 import params
@@ -79,6 +80,10 @@ proc load*(self: var Autario) =
     var node = parseFile(configFile)
     self = deserializeAutario(node)
 
+proc save*(self: Autario) =
+  ensureParent(configFile)
+  writeFile(configFile, $self.serialize())
+
 proc syncRead*(self: var Autario, force: bool = false) =
   if self.auth.isSome:
     if not self.auth.get.checkIfUpToDate() or force:
@@ -91,22 +96,14 @@ proc syncRead*(self: var Autario, force: bool = false) =
       self = deserializeAutario(node)
       self.auth.get.updateSyncTime()
 
-proc ensureParent(path: string) =
-  let parent = parentDir(path)
-  if not dirExists(parent):
-    ensureParent(parent)
-    createDir(parent)
 
-proc syncWrite*(self: var Autario) =
-  ensureParent(configFile)
-  writeFile(configFile, $self.serialize())
-  if self.dirty:
+proc syncWrite*(self: var Autario, force: bool = false) =
+  if self.dirty or force:
     self.dirty = false
     if self.auth.isSome:
       echo "Uploading changes..."
       self.auth.get.updateSyncTime()
       self.auth.get.uploadData($self.serialize())
-    writeFile(configFile, $self.serialize())
 
 proc createBlobUrl(): string =
   var client = newHttpClient()

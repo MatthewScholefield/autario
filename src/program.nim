@@ -7,6 +7,7 @@ import sugar
 import os
 import json
 import marshal
+import sets
 
 import params
 import autario
@@ -125,6 +126,7 @@ let commandDescriptions = {
   "info": "View details about a task",
   "recur": "Show recurring tasks",
   "link": "Link this device with other devices",
+  "unlink": "Unlink this device from other devices",
   "sync": "Force synchronization between devices",
   "help": "Show this information"
 }
@@ -139,7 +141,7 @@ proc handleSync(self: var Program) =
   if self.auta.auth.isNone:
     raise newException(AutaError, "You must link your device before syncing. Run 'auta link'.")
   self.auta.syncRead(force=true)
-  self.auta.dirty = true
+  self.auta.syncWrite(force=true)
 
 proc handleLink(self: var Program) =
   let args = self.after.tokens
@@ -166,6 +168,7 @@ proc handleLink(self: var Program) =
       echo "Synchronization already set up!"
     else:
       self.auta.enableSync()
+      self.auta.syncWrite(force=true)
       echo "Synchronization set up!"
   else:
     let command = args[0]
@@ -184,11 +187,18 @@ proc handleLink(self: var Program) =
         echo "Failed to read data from server. Please check if this is the correct file."
         return
       self.auta.auth = some(auth)
-      self.auta.syncRead(true)
+      self.auta.syncRead(force=true)
       echo "Linking successful."
     else:
       raise newException(ValueError, &"Invalid command: {command}")
 
+proc handleUnlink(self: var Program) =
+  if self.after.tokens.len > 0:
+    raise newException(AutaError, &"Usage: {lastPathPart(getAppFilename())} unlink")
+  if self.auta.auth.isNone:
+    raise newException(AutaError, "Synchronization not set up! (or already unlinked)")
+  self.auta.auth = none(AutaAuth)
+  self.auta.dirty = true
 
 let commandToHandler = {
   "create": handleCreate,
@@ -202,11 +212,19 @@ let commandToHandler = {
   "info": handleInfo,
   "recur": handleRecur,
   "link": handleLink,
+  "unlink": handleUnlink,
   "sync": handleSync,
   "help": handleHelp,
   "-h": handleHelp,
   "--help": handleHelp
-}.toTable;
+}.toTable
+
+
+const skipSyncCommands = [
+  "link",
+  "unlink",
+  "sync"
+].toHashSet
 
 proc parse*(self: var Program, args: seq[string]) =
   for arg in args:
@@ -224,8 +242,15 @@ proc parse*(self: var Program, args: seq[string]) =
     self.before = Params()
 
 proc run*(self: var Program) =
+  let shouldSync = not skipSyncCommands.contains(self.command)
+
   self.auta.load()
-  self.auta.syncRead()
+  if shouldSync:
+    self.auta.syncRead()
   self.checkRecurring()
+
   commandToHandler[self.command](self)
-  self.auta.syncWrite() 
+
+  if shouldSync:
+    self.auta.syncWrite()
+  self.auta.save()

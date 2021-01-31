@@ -1,4 +1,5 @@
 import macros
+import os
 
 macro debug*(n: varargs[typed]): untyped =
   result = newNimNode(nnkStmtList, n)
@@ -17,3 +18,9 @@ macro debug*(n: varargs[typed]): untyped =
     else:
       # add newline
       result.add(newCall("writeLine", newIdentNode("stdout"), newStrLitNode("")))
+
+proc ensureParent*(path: string) =
+  let parent = parentDir(path)
+  if not dirExists(parent):
+    ensureParent(parent)
+    createDir(parent)
