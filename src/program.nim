@@ -100,6 +100,10 @@ proc handleList(self: var Program) =
   if tasks.len > 0:
     echo tasks.formatTasks()
     echo ""
+  else:
+    if self.combined.tokens.len > 0 and not commandLineParams().contains("list"):
+      let args = commandLineParams().join(" ")
+      echo &"Interpreting as 'auta list {args}'"
   echo &"{tasks.len} tasks."
 
 
