@@ -31,11 +31,25 @@ trap 'cleanup_git; cleanup_folder' SIGINT
 version=$1
 stash_output=$(git stash)
 
+sed -i 's/\(version\s*=\s*\).*/\1"'$version'"/gm' autario.nimble
+git add autario.nimble
+git commit -m "Increment version to $version"
+
 mkdir "release_$version"
 cd "release_$version"
 
 orig_artifact=$(get_latest_artifact)
 artifact=$orig_artifact
+
+git push origin main
+
+cleanup_git
+
+while [ "$artifact" = "$orig_artifact" ]; do
+    echo "Waiting for build to complete..."
+    sleep 60
+    artifact=$(get_latest_artifact)
+done
 
 route=$(grep -oP '(?<=github.com).*' <<< "$artifact")
 hub api $route > build.zip
