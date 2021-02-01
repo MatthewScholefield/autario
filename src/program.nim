@@ -116,9 +116,15 @@ proc handleInfo(self: var Program) =
     echo "No tasks matched the search query."
 
 proc handleRecur(self: var Program) =
-  let tasks = self.auta.tasks.filter(task => "recur" in task.attributes)
-  echo tasks.formatTasks()
-  echo ""
+  let filter = self.combined.toFilter
+  let tasks = self.auta.tasks.filter(
+    (task: Task) =>
+      "recur" in task.attributes and
+      filter.matches(task, ignoreContext = true)
+  )
+  if tasks.len > 0:
+    echo tasks.formatTasks()
+    echo ""
   echo &"{tasks.len} tasks."
 
 let commandDescriptions = {
