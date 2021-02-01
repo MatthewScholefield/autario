@@ -2,7 +2,7 @@
 
 set -eE
 
-root=$(dirname "$0")
+root=$(realpath "$(dirname "$0")/..")
 
 if ! [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
     echo "Usage: $0 VERSION"
