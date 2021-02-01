@@ -35,7 +35,6 @@ type
     kind*: RRTimeCommandType
     num*: int
     unit*: RTimeUnit
-    exact*: bool
 
 type
   Parser* = object
