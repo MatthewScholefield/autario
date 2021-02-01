@@ -151,10 +151,9 @@ proc findTaskIndex(self: Autario, taskUuid: string): Option[int] =
     if task.uuid == taskUuid:
       return some(i)
 
-iterator matchedTasks*(self: Autario, params: Params,
-    withContext = true): Task =
+iterator matchedTasks*(self: Autario, params: Params): Task =
   for i in self.tasks:
-    if params.toFilter.matches(i, withContext):
+    if params.toFilter.matches(i):
       yield i
 
 proc getTask*(self: Autario, taskUuid: string): Option[Task] =
