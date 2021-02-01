@@ -96,7 +96,7 @@ proc handleDelete(self: var Program) =
     echo "No tasks matched the search query."
 
 proc handleList(self: var Program) = 
-  let tasks = toSeq(self.auta.matchedTasks(self.combined, true))
+  let tasks = toSeq(self.auta.matchedTasks(self.combined))
   if tasks.len > 0:
     echo tasks.formatTasks()
     echo ""

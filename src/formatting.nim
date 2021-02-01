@@ -133,6 +133,8 @@ proc formatTaskInfo*(task: Task): string =
   ]
   if "due" in task.data:
     formatParts.add(["Due", formatDuration(task.getSecondsTillDue, high(int), task.getDuePrecision)])
+  if "begins" in task.data:
+    formatParts.add(["Begins", formatDuration(task.getSecondsTillBegins, high(int), task.getBeginsPrecision)])
   if "recur" in task.data:
     formatParts.add(["Recur", task.attributes["recur"]])
   if task.tags.len != 0:

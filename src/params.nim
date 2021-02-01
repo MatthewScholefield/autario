@@ -2,6 +2,7 @@ import collections/tables
 import strutils
 import sequtils
 import options
+import json
 
 import task
 
@@ -13,6 +14,7 @@ type Params* = object of RootObj
 
 type Filter* = object of Params
   ids*: seq[int]
+  showNotBegun*: bool
 
 proc ingest*(self: var Params, token: string) =
   let token = token
@@ -33,6 +35,10 @@ proc toFilter*(self: Params): Filter =
     context : self.context,
     attributes : self.attributes
   )
+  let ind = result.tags.find("begins")
+  if ind != -1:
+    result.tags.del(ind)
+    result.showNotBegun = true
   
   for i, token in self.tokens:
     if token.all(isDigit):
@@ -40,11 +46,13 @@ proc toFilter*(self: Params): Filter =
     else:
       result.tokens.add(token)
 
-
 proc matches*(self: Filter, task: Task, withContext = true): bool =
+  if self.ids.len != 0 and task.id in self.ids:
+    return true
   return (
-    (self.ids.len == 0 or task.id in self.ids) and
+    (not ("begins" in task.data) or self.showNotBegun or task.getSecondsTillBegins() <= 0) and
     (self.tokens.len == 0 or self.tokens.join(" ") in task.label) and
     (if self.context.isNone: not withContext or task.context == "" else: self.context.get == task.context) and
-    (self.attributes.len == 0 or self.attributes == task.attributes)
+    (self.attributes.len == 0 or self.attributes == task.attributes) and
+    (self.ids.len == 0 or self.tokens.len > 0 or self.context.isSome or self.attributes.len > 0)
   )

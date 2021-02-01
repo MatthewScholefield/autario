@@ -44,6 +44,46 @@ proc serialize*(self: Task): JsonNode =
     "data": self.data
   }
 
+
+proc extractImplicitRecurrence*(offsetParts: var seq[RTimeCommand]): RTimeCommand =
+  var absolutes = offsetParts.filter((x) => x.kind == tctRemainderSet)
+  if absolutes.len > 0:
+    var recurUnit = low(RTimeUnit)
+    assert recurUnit < tuDays
+    for absolute in absolutes:
+      case absolute.unit:
+      of tuHour:
+        if recurUnit == tuDays:
+          recurUnit = tuDays
+      of tuWeekday:
+        if recurUnit < tuWeeks:
+          recurUnit = tuWeeks
+      of tuMonthday:
+        if recurUnit < tuMonths:
+          recurUnit = tuMonths
+      of tuMonth:
+        if recurUnit < tuYears:
+          recurUnit = tuYears
+      else:
+        discard
+    if recurUnit > low(RTimeUnit):
+      return RTimeCommand(
+        kind : tctRecurUnit,
+        num : 1,
+        unit : recurUnit
+      )
+  var offsets = offsetParts.filter((x) => x.kind == tctUnitAdd)
+  if offsets.len > 1:
+    raise newException(AutaError, "Recurrence interval must be simple (ie. '2weeks' or 'weekly')")
+  if offsets.len == 0:
+    raise newException(AutaError, "No recurrence interval specified. Must use an interval like 'weekly' or '2weeks'.")
+  offsetParts = offsetParts.filter((x) => x.kind != tctUnitAdd)
+  return RTimeCommand(
+    kind : tctRecurUnit,
+    num : offsets[0].num,
+    unit : offsets[0].unit
+  )
+
 proc registerAttributes*(self: var Task, attributes: Table[string, string], currentTime: DateTime = now()) =
   var attributes = attributes
   if "due" in attributes:
@@ -57,16 +97,30 @@ proc registerAttributes*(self: var Task, attributes: Table[string, string], curr
       "time": quant.date.toTime.toUnix,
       "precision": quant.precision
     }
+  if "begins" in attributes:
+    let ret = Parser(parse : timeparser.parseTime).parseTime(attributes["begins"])
+    if ret.isNone:
+      raise newException(AutaError, "Invalid begins attribute")
+    let quant = ret.get.quantifyTime(currentTime)
+    self.data["begins"] = %*{
+      "data": ret.get,
+      "base": currentTime.toTime.toUnix,
+      "time": quant.date.toTime.toUnix,
+      "precision": quant.precision
+    }
   if "recur" in attributes:
     let ret = Parser(parse : parseRecur).parseRecur(attributes["recur"])
     if ret.isNone:
       raise newException(AutaError, "Invalid recur attribute")
-    let
-      offsetParts = ret.get.filter((x) => x.kind != tctRecurUnit)
+    var
       recurParts = ret.get.filter((x) => x.kind == tctRecurUnit)
-    if recurParts.len != 1:
-      raise newException(AutaError, "Recur unit doesn't specify frequency properly")
-    var recur = RTimeCommand(kind: tctUnitAdd, num: recurParts[0].num, unit: recurParts[0].unit)
+      offsetParts = ret.get.filter((x) => x.kind != tctRecurUnit)
+    if recurParts.len > 1:
+      raise newException(AutaError, "Multiple recurring intervals specified")
+    if recurParts.len == 0:
+        recurParts.add(extractImplicitRecurrence(offsetParts))
+    var recurPart = recurParts[0]
+    var recur = RTimeCommand(kind: tctUnitAdd, num: recurPart.num, unit: recurPart.unit)
     var precision, lastEvent: int
     if offsetParts.len == 0:
       if "due" in self.data:
@@ -87,6 +141,7 @@ proc registerAttributes*(self: var Task, attributes: Table[string, string], curr
     self.context = "__recur__" & (if self.context == "": "" else: ":" & self.context)
   
   attributes.del("due")
+  attributes.del("begins")
   attributes.del("recur")
   if attributes.len != 0:
     for key in attributes.keys:
@@ -120,6 +175,11 @@ proc spawnTasks*(self: var Task): seq[Task] =
 proc getSecondsTillDue*(self: Task): int =
   self.data{"due", "time"}.getInt() - getTime().toUnix().int
 
+proc getSecondsTillBegins*(self: Task): int =
+  self.data{"begins", "time"}.getInt() - getTime().toUnix().int
+
 proc getDuePrecision*(self: Task): int =
   self.data{"due", "precision"}.getInt()
 
+proc getBeginsPrecision*(self: Task): int =
+  self.data{"begins", "precision"}.getInt()

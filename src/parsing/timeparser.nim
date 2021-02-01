@@ -4,6 +4,8 @@ import strutils
 import collections/tables
 import times
 
+import ../exceptions
+
 import parserutils
 
 const weekdayPatterns = @[
@@ -111,6 +113,8 @@ proc makeNextHandler(): auto =
     groups.del("nexts")
     assert(groups.len == 1)
     for key, value in groups.pairs:
+      if key == "second" or key == "seconds":
+        raise newException(AutaError, "Seconds precision is not supported.")
       result.add(RTimeCommand(
         kind: tctRelativeUnitSet,
         num: nextCount,
@@ -125,6 +129,8 @@ proc makeEnumHandler[T](unit: parserutils.RTimeUnit, patterns: seq[tuple[pattern
 proc makeMatchHandler(commandType: RRTimeCommandType): auto =
   (proc(match: RegexMatch): seq[RTimeCommand] =
     for key, value in extractGroups(match).pairs:
+      if key == "second" or key == "seconds":
+        raise newException(AutaError, "Seconds precision is not supported.")
       result.add(RTimeCommand(
         kind: commandType,
         num: value.parseInt,

@@ -152,7 +152,7 @@ proc findTaskIndex(self: Autario, taskUuid: string): Option[int] =
       return some(i)
 
 iterator matchedTasks*(self: Autario, params: Params,
-    withContext = false): Task =
+    withContext = true): Task =
   for i in self.tasks:
     if params.toFilter.matches(i, withContext):
       yield i
