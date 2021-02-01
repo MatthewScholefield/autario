@@ -3,6 +3,7 @@ import strutils
 import sequtils
 import options
 import json
+import sugar
 
 import task
 
@@ -51,8 +52,9 @@ proc matches*(self: Filter, task: Task, withContext = true): bool =
     return true
   return (
     (not ("begins" in task.data) or self.showNotBegun or task.getSecondsTillBegins() <= 0) and
+    (self.tags.all((x) => task.tags.contains(x))) and
     (self.tokens.len == 0 or self.tokens.join(" ") in task.label) and
     (if self.context.isNone: not withContext or task.context == "" else: self.context.get == task.context) and
     (self.attributes.len == 0 or self.attributes == task.attributes) and
-    (self.ids.len == 0 or self.tokens.len > 0 or self.context.isSome or self.attributes.len > 0)
+    (self.ids.len == 0 or self.tokens.len > 0 or self.context.isSome or self.attributes.len > 0 or self.tags.len > 0)
   )
