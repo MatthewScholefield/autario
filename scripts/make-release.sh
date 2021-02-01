@@ -27,7 +27,7 @@ cleanup_folder() {
     rm -rf "release_$version"
 }
 
-trap 'cleanup_git; cleanup_folder' SIGINT
+trap 'cleanup_git; cleanup_folder' EXIT
 version=$1
 stash_output=$(git stash)
 
@@ -60,9 +60,6 @@ hub release create -m "Version $version" -a "$binary" "$version"
 
 cd ..
 rm -rf "release_$version"
-
-cleanup_folder
-cleanup_git
 
 echo "Created release $version."
 
