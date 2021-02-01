@@ -17,7 +17,7 @@ handles the following things:
 
 ## Usage
 
-Interact with Autario through the `auta` command.
+Interact with Autario through the `auta` command (see `auta -h`).
 
 **Create:**
 ```bash
@@ -29,12 +29,16 @@ auta create weekly homework +cs357 due:mon.8pm recur:weekly
 
 **List:**
 ```bash
-auta list
-auta list --all
-auta list +cs357
+auta  # Default command is "list"
+auta homework  # Searches for "homework" in label
+auta proj +cs357  # Tasks with +cs357 label and "proj" substring in label
+auta recur  # Show hidden "base" recurring tasks
 ```
 
 **Done:**
+
+*Warning: Currently, marking as "done" entails deletion*
+
 ```bash
 auta 12 15 done  # Marks tasks 12 and 15 as done
 auta +cs357 done  # Marks all tasks with tag +cs357 as done
@@ -55,7 +59,7 @@ auta link export auth.json  # Export key
 
 # Copy key to another platform securely...
 
-auta link import auta.json
+auta link import auth.json
 ```
 
 #### Technical details
@@ -73,7 +77,7 @@ fetches and decrypts the new blob.
 ## Installation
 
 Find static Linux executables on the [releases page](https://github.com/MatthewScholefield/autario/releases).
-Alternatively, find artifacts within the CI job of the latest commit.
+Alternatively, find assets within the CI job of the latest commit.
 
 ### Compiling
 
@@ -87,7 +91,6 @@ nimble build
 
 ### Due Time
 
-
 ```bash
 due:2days.1_hour.3minutes
 "due:2 days.1 hour"
@@ -97,7 +100,7 @@ due:30th.2pm
 recur:weekly
 recur:monthly
 recur:wed.8pm
-recur:wednesdays.15:30
+recur:wednesday.15:30
 recur:21st.3pm
 ```
 
