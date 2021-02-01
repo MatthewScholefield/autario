@@ -136,7 +136,7 @@ proc registerAttributes*(self: var Task, attributes: Table[string, string], curr
     var reverseRecur = recur
     reverseRecur.num *= -1
     while lastEvent > currentTime.toTime.toUnix:
-      lastEvent = @[reverseRecur].quantifyTime(lastEvent.fromUnix.local).date.toTime.toUnix.int
+      lastEvent = @[reverseRecur].quantifyTime(lastEvent)
     self.data["recur"] = %*{"lastEvent": lastEvent, "freq": recur, "precision": precision}
     self.context = "__recur__" & (if self.context == "": "" else: ":" & self.context)
   
@@ -167,7 +167,7 @@ proc spawnTasks*(self: var Task): seq[Task] =
     task.context = task.context.split("__recur__", 1)[1].strip(trailing = false, chars = {':'})
     var attributes = task.attributes  # Needs to be `var` (possible bug in Nim)
     task.attributes.clear()
-    task.registerAttributes(attributes, nextEvent.fromUnix.local)
+    task.registerAttributes(attributes, lastEvent.fromUnix.local)
     result.add(task)
     lastEvent = nextEvent
   self.data{"recur", "lastEvent"} = %lastEvent

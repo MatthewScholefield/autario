@@ -75,7 +75,7 @@ proc quantifyTime*(unsortedCommands: seq[RTimeCommand], src: Datetime): Quantifi
         date.hour = command.num
         precision.mark(60 * 60)
       of tuWeekday:
-        delta.days = 1 + (command.num - src.weekday.ord - 1) mod 7
+        delta.days = 1 + (command.num - src.weekday.ord - 1 + 7) mod 7
         precision.mark(24 * 60 * 60)
       of tuMonthday:
         date.monthday = command.num
@@ -114,3 +114,6 @@ proc quantifyTime*(unsortedCommands: seq[RTimeCommand], src: Datetime): Quantifi
 
   let base = date.toDateTime
   return (base + delta, precision)
+
+proc quantifyTime*(unsortedCommands: seq[RTimeCommand], src: int): int =
+  unsortedCommands.quantifyTime(src.fromUnix.local).date.toTime.toUnix.int
