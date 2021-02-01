@@ -16,7 +16,7 @@ type
     tuMonthday = "monthday"
     tuMonth = "month"
     tuYear = "year"
-    
+
     tuMinutes = "minutes"
     tuHours = "hours"
     tuDays = "days"

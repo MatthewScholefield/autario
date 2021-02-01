@@ -162,6 +162,8 @@ proc parseTime*(parser: Parser, input: string): Option[seq[RTimeCommand]] =
     return parser.parseRemaining(mapResult.get.remaining, commands)
 
 when isMainModule:
+    import ../timequantifier
+    import times
     import strformat
     import os
     let inp = paramStr(1)
@@ -169,3 +171,6 @@ when isMainModule:
     let output = if res.isNone: "error" else: $res.get
     echo &"Input: \"{inp}\""
     echo &"Output: {output}"
+    if res.isSome:
+      let quant = res.get.quantifyTime(now()).date.format("yyyy-MM-dd HH:mm")
+      echo &"Quantified: {quant}"
