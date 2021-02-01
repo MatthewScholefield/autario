@@ -21,10 +21,10 @@ Interact with Autario through the `auta` command (see `auta -h`).
 
 **Create:**
 ```bash
-auta create buy groceries
-auta create implement web-based form +frontend due:thu  # Use +tag or due:<date> identifiers
-auta create lab 6 +cs233 due:1week.2days
-auta create weekly homework +cs357 due:mon.8pm recur:weekly
+auta add buy groceries
+auta add implement web-based form +frontend due:thu  # Use +tag or due:<date> identifiers
+auta create lab 6 +cs233 due:1week.2days  # "add" and "create" are aliases
+auta add weekly homework +cs357 due:mon.8pm recur:weekly
 ```
 
 **List:**
