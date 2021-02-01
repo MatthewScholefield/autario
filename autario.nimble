@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.4.1"
+version       = "0.5.0"
 author        = "Matthew D. Scholefield"
 description   = "A command line tool to automate your life"
 license       = "MIT"
