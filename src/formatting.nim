@@ -31,9 +31,15 @@ proc formatPlural(amount: int, unit: string): string =
 
 
 proc formatAnd(items: seq[string]): string =
-  if items.len < 3:
-    return items.join(" and ")
-  return items[0] & ", and " & items[1 .. ^ items.len].toSeq.join(", ")
+  case items.len
+  of 0:
+    ""
+  of 1:
+    items[0]
+  of 2:
+    items.join(" and ")
+  else:
+    items[0 .. ^ 2].toSeq.join(", ") & ", and " & items[^1]
 
 
 proc matchPrecision(precision: int, unitValues: seq[int], middle = 0.5): int =
