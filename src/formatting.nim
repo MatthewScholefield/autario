@@ -77,6 +77,94 @@ proc formatDuration*(delta: int64, numItems: int, precision: int): string =
       break
   return formatAnd(parts[0 .. min(parts.len - 1, numItems - 1)])
 
+proc formatDate*(date: DateTime, precision: int, src: DateTime = now()): string =
+  let precisionIndex = matchPrecision(precision, unitValues)
+  if (
+    src - initDuration(days = 2) < date and date < src + initDuration(days = 8) and (src - initDuration(days = 2)).monthday != date.monthday and (src + initDuration(days = 8)).monthday != date.monthday
+  ):
+    let label = (
+      if date.monthday == src.monthday:
+        ""  # Same day
+      elif date.monthday == (src + initDuration(days = 1)).monthday:
+        "Tomorrow, "  # Tomorrow
+      elif date.monthday == (src + initDuration(days = -1)).monthday:
+        "Yesterday, "  # Yesterday
+      else:
+        date.format("dddd") & ", "
+    )
+    return (
+      case precisionIndex
+      of 0: "this year"
+      of 1: "this month"
+      of 2: date.format("MMM d") & " to " & (date + initDuration(weeks = 1)).format("MMM d")
+      of 3: (
+        if label.len == 0:
+          "Today"
+        else:
+          label.strip(chars =  {',', ' '})
+      )
+      of 4: label & date.format("htt")
+      of 5: label & date.format("h:mmtt")
+      of 6: label & date.format("h:mm:sstt")
+      else:
+        raise newException(ValueError, "Unknown precision")
+    )
+  if date.year != src.year:
+    case precisionIndex
+    of 0: date.format("yyyy")
+    of 1: date.format("MMM yyyy")
+    of 2: date.format("MMM d") & " to " & (date + initDuration(weeks = 1)).format("MMM d yyyy")
+    of 3: date.format("MMM d yyyy")
+    of 4: date.format("MMM d yyyy, htt")
+    of 5: date.format("MMM d yyyy, h:mmtt")
+    of 6: date.format("MMM d yyyy, h:mm:sstt")
+    else:
+      raise newException(ValueError, "Unknown precision")
+  elif date.month != src.month:
+    case precisionIndex
+    of 0: "this year"
+    of 1: date.format("MMMM")
+    of 2: date.format("MMM d") & " to " & (date + initDuration(weeks = 1)).format("MMM d")
+    of 3: date.format("MMM d")
+    of 4: date.format("MMM d, htt")
+    of 5: date.format("MMM d, h:mmtt")
+    of 6: date.format("MMM d, h:mm:sstt")
+    else:
+      raise newException(ValueError, "Unknown precision")
+  elif date.monthday != src.monthday:
+    case precisionIndex
+    of 0: "this year"
+    of 1: "this month"
+    of 2: date.format("MMM d") & " to " & (date + initDuration(weeks = 1)).format("MMM d")
+    of 3: date.format("MMM d")
+    of 4: date.format("MMM d, htt")
+    of 5: date.format("MMM d, h:mmtt")
+    of 6: date.format("MMM d, h:mm:sstt")
+    else:
+      raise newException(ValueError, "Unknown precision")
+  elif date.monthday != src.monthday:
+    case precisionIndex
+    of 0: "this year"
+    of 1: "this month"
+    of 2: date.format("MMM d") & " to " & (date + initDuration(weeks = 1)).format("MMM d")
+    of 3: date.format("MMM d")
+    of 4: date.format("MMM d, htt")
+    of 5: date.format("MMM d, h:mmtt")
+    of 6: date.format("MMM d, h:mm:sstt")
+    else:
+      raise newException(ValueError, "Unknown precision")
+  else:
+    case precisionIndex
+    of 0: "this year"
+    of 1: "this month"
+    of 2: date.format("MMM d") & " to " & (date + initDuration(weeks = 1)).format("MMM d")
+    of 3: "today"
+    of 4: date.format("htt")
+    of 5: date.format("h:mmtt")
+    of 6: date.format("h:mm:sstt")
+    else:
+      raise newException(ValueError, "Unknown precision")
+
 
 proc formatColumns*[T](printData: seq[array[T, string]], labels: array[T,
     string]): string =
@@ -138,7 +226,10 @@ proc formatTaskInfo*(task: Task): string =
     ["Description", task.label]
   ]
   if "due" in task.data:
-    formatParts.add(["Due", formatDuration(task.getSecondsTillDue, high(int), task.getDuePrecision)])
+    let dueDuration = formatDuration(task.getSecondsTillDue, high(int), task.getDuePrecision)
+    let dueDate = formatDate(task.data{"due", "time"}.getInt.fromUnix.local, task.getDuePrecision)
+    formatParts.add(["Time Remaining", dueDuration])
+    formatParts.add(["Due", dueDate])
   if "begins" in task.data:
     formatParts.add(["Begins", formatDuration(task.getSecondsTillBegins, high(int), task.getBeginsPrecision)])
   if "recur" in task.data:

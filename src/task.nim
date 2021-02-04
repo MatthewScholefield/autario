@@ -157,7 +157,7 @@ proc spawnTasks*(self: var Task): seq[Task] =
   let curTime = now()
   while curTime.toTime.toUnix >= lastEvent:
     let delta = @[recurData["freq"].to(RTimeCommand)]
-    let nextEvent = delta.quantifyTime(lastEvent.fromUnix.local).date.toTime.toUnix.int
+    let nextEvent = delta.quantifyTime(lastEvent)
     var task: Task
     task.deepCopy(self)
     task.uuid = ""
