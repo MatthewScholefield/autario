@@ -37,31 +37,31 @@ proc quantifyTime*(unsortedCommands: seq[RTimeCommand], src: Datetime): Quantifi
       precision.mark(60)
     of tuHours:
       delta.hours = command.num
-      date.minute = 0
+      date.minute = 59
       precision.mark(60 * 60)
     of tuDays:
       delta.days = command.num
-      date.hour = 0
-      date.minute = 0
+      date.hour = 23
+      date.minute = 59
       precision.mark(24 * 60 * 60)
     of tuWeeks:
       delta.weeks = command.num
-      delta.days -= (src.weekday.ord - dSun.ord) mod 7
-      date.hour = 0
-      date.minute = 0
+      delta.days -= (src.weekday.ord - dSat.ord - 7) mod 7
+      date.hour = 23
+      date.minute = 59
       precision.mark(7 * 24 * 60 * 60)
     of tuMonths:
       delta.months = command.num
-      date.monthday = 1
-      date.hour = 0
-      date.minute = 0
+      date.monthday = 28
+      date.hour = 23
+      date.minute = 59
       precision.mark(30 * 24 * 60 * 60)
     of tuYears:
       delta.years = command.num
       date.month = mJan
-      date.monthday = 1
-      date.hour = 0
-      date.minute = 0
+      date.monthday = 28
+      date.hour = 23
+      date.minute = 59
       precision.mark(365 * 24 * 60 * 60)
     else:
       raise newException(AutaError, "No such command unit: " & $command.unit)

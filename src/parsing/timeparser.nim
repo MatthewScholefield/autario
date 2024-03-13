@@ -59,8 +59,8 @@ const nextPatterns = @[
   r"(?<year>year)",
 ]
 const relativePattern = "(?<offsets>(?:" & ["day", "(?:before|after)", ""].join(
-    allSep) & ")*)(?<day>tomorrow|yesterday)"
-const nextPatternBase = "(?<nexts>(?:(?:next|last)" & allSep & ")+)"
+    allSep) & ")*)(?<day>today|tomorrow|yesterday)"
+const nextPatternBase = "(?<nexts>(?:(?:next|this|last)" & allSep & ")+)"
 
 proc joinRegex[T](patterns: seq[tuple[pattern: string, value: T]]): string =
   "(" & (var s: seq[string]; for i in patterns: s.add(i[0]); s.join("|")) & ")"
@@ -143,7 +143,7 @@ proc makeRelativeMatchHandler(): auto =
     result.add(RTimeCommand(
       kind: tctRelativeUnitSet,
       num: groups["offsets"].count("after") - groups["offsets"].count("before") +
-          (if groups["day"] == "tomorrow": 1 else: -1),
+          (if groups["day"] == "tomorrow": 1 else: (if groups["day"] == "today": 0 else: -1)),
       unit: tuDays
     )))
 proc parseTime*(parser: Parser, input: string): Option[seq[RTimeCommand]] =
