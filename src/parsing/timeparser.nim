@@ -163,6 +163,7 @@ proc parseTime*(parser: Parser, input: string): Option[seq[RTimeCommand]] =
 
 when isMainModule:
     import ../timequantifier
+    import ../formatting
     import times
     import strformat
     import os
@@ -172,5 +173,8 @@ when isMainModule:
     echo &"Input: \"{inp}\""
     echo &"Output: {output}"
     if res.isSome:
-      let quant = res.get.quantifyTime(now()).date.format("yyyy-MM-dd HH:mm")
-      echo &"Quantified: {quant}"
+      let quant = res.get.quantifyTime(now())
+      let dateStr = quant.date.format("yyyy-MM-dd HH:mm")
+      let precisionStr = formatDuration(quant.precision, 1, 60)
+      # Loop over units (days, hours, minutes), and 
+      echo &"Quantified: {dateStr} (precision = {precisionStr})"

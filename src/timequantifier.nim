@@ -41,27 +41,19 @@ proc quantifyTime*(unsortedCommands: seq[RTimeCommand], src: Datetime): Quantifi
       precision.mark(60 * 60)
     of tuDays:
       delta.days = command.num
-      date.hour = 23
-      date.minute = 59
       precision.mark(24 * 60 * 60)
     of tuWeeks:
       delta.weeks = command.num
       delta.days -= (src.weekday.ord - dSat.ord - 7) mod 7
-      date.hour = 23
-      date.minute = 59
       precision.mark(7 * 24 * 60 * 60)
     of tuMonths:
       delta.months = command.num
       date.monthday = 28
-      date.hour = 23
-      date.minute = 59
       precision.mark(30 * 24 * 60 * 60)
     of tuYears:
       delta.years = command.num
       date.month = mJan
       date.monthday = 28
-      date.hour = 23
-      date.minute = 59
       precision.mark(365 * 24 * 60 * 60)
     else:
       raise newException(AutaError, "No such command unit: " & $command.unit)
@@ -112,7 +104,10 @@ proc quantifyTime*(unsortedCommands: seq[RTimeCommand], src: Datetime): Quantifi
         else:
           raise newException(AutaError, "No such command unit: " & $command.unit)
 
-  let base = date.toDateTime
+  if precision >= 24 * 60 * 60:
+    date.hour = 23
+    date.minute = 59
+  var base = date.toDateTime
   return (base + delta, precision)
 
 proc quantifyTime*(unsortedCommands: seq[RTimeCommand], src: int): int =
