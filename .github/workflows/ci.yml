@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build:
@@ -15,7 +15,7 @@ jobs:
       - uses: jiro4989/setup-nim-action@v1
       - run: nimble build -Y
       - run: testament p tests
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         with:
           name: Static auta executable for Linux x86_64
           path: auta
