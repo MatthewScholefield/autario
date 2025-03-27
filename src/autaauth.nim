@@ -45,9 +45,13 @@ proc simpleDecrypt(key: string, data: string): Option[string] =
 proc uploadData*(self: var AutaAuth, data: string) =
   let encData = simpleEncrypt(base64.decode(self.key), data)
   var client = newHttpClient(timeout=10000)
-  discard client.request(self.dataUrl, httpMethod = HttpPut, body = encData)
+  var resp = client.request(self.dataUrl, httpMethod = HttpPut, body = encData)
+  if resp.code.int >= 300:
+    raise newException(OSError, "Failed to upload data (" & $resp.code & "): " & resp.body)
   client = newHttpClient(timeout=10000)
-  discard client.request(self.changeIdUrl, httpMethod = HttpPut, body = self.changeId)
+  resp = client.request(self.changeIdUrl, httpMethod = HttpPut, body = self.changeId)
+  if resp.code.int >= 300:
+    raise newException(OSError, "Failed to update change ID (" & $resp.code & "): " & resp.body)
 
 
 proc readData*(self: AutaAuth): Option[string] =

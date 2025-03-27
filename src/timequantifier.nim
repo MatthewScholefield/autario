@@ -1,7 +1,6 @@
 import parsing/parserutils
 import collections/tables
 import times
-import options
 
 import exceptions
 import parsing/parserutils

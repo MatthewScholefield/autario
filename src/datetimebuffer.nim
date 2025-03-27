@@ -20,7 +20,7 @@ proc toBuffer*(time: DateTime): DateTimeBuffer =
   )
 
 proc toDateTime*(buffer: DateTimeBuffer): DateTime =
-    initDateTime(
+    dateTime(
         monthday = buffer.monthday,
         month = buffer.month,
         year = buffer.year,
